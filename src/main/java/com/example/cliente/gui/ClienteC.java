@@ -33,6 +33,7 @@ public class ClienteC extends JFrame {
         sendButton = new JButton("Enviar");
 
         sendButton.addActionListener(e -> enviarMensaje());
+        inputField.addActionListener(e -> enviarMensaje());
 
         panel.add(inputField);
         panel.add(sendButton);
@@ -61,6 +62,8 @@ public class ClienteC extends JFrame {
                     }
                 } catch (IOException e) {
                     textArea.append("Conexión perdida.\n");
+                    inputField.setEnabled(false);
+                    sendButton.setEnabled(false);
                 }
             }).start();
         } catch (IOException e) {
@@ -71,8 +74,10 @@ public class ClienteC extends JFrame {
     private void enviarMensaje() {
         String mensaje = inputField.getText().trim();
         if (!mensaje.isEmpty() && out != null) {
-            out.println(nombre + ": " + mensaje); // Enviar mensaje con el nombre del cliente
-            inputField.setText("");
+            out.println(mensaje); // Enviar el mensaje al servidor
+            textArea.append("Tú: " + mensaje + "\n"); // Mostrar el mensaje en la interfaz del cliente
+            inputField.setText(""); // Limpiar el campo de texto
+
         }
     }
 

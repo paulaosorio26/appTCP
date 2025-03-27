@@ -1,14 +1,9 @@
 package com.example.servidor.gui;
 
 import javax.swing.*;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.HashSet;
-import java.util.Set;
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
 public class PrincipalSrv extends JFrame {
     private final int PORT = 12345;
@@ -16,7 +11,9 @@ public class PrincipalSrv extends JFrame {
     private JButton startButton, stopButton;
     private ServerSocket serverSocket;
     private boolean running = false;
-    private final Set<PrintWriter> clientes = new HashSet<>();
+    private final Set<String> nombresClientes = new HashSet<>();
+    private final Set<PrintWriter> clientesComunes = new HashSet<>();
+    private PrintWriter adminOut = null;
 
     public PrincipalSrv() {
         setTitle("Servidor");
@@ -66,7 +63,10 @@ public class PrincipalSrv extends JFrame {
         startButton.setEnabled(true);
         stopButton.setEnabled(false);
         try {
-            for (PrintWriter out : clientes) {
+            if (adminOut != null) {
+                adminOut.println("SERVIDOR_CERRADO");
+            }
+            for (PrintWriter out : clientesComunes) {
                 out.println("SERVIDOR_CERRADO");
             }
             if (serverSocket != null) {
@@ -82,6 +82,7 @@ public class PrincipalSrv extends JFrame {
         private Socket socket;
         private PrintWriter out;
         private String nombre;
+        private boolean esAdmin;
 
         public ManejadorCliente(Socket socket) {
             this.socket = socket;
@@ -91,32 +92,73 @@ public class PrincipalSrv extends JFrame {
             try {
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
-                clientes.add(out);
 
-                nombre = in.readLine();
-                textArea.append(nombre + " se ha conectado.\n");
-
-                // Avisar a los demás clientes que alguien se conectó
-                for (PrintWriter cliente : clientes) {
-                    cliente.println(nombre + " se ha unido al chat.");
+                // Recibir nombre del cliente
+                String linea = in.readLine();
+                if (linea == null || linea.trim().isEmpty()) {
+                    linea = "Cliente" + (int) (Math.random() * 1000);
                 }
 
+                if (linea.startsWith("ADMIN:")) {
+                    esAdmin = true;
+                    nombre = linea.substring(6);
+                    adminOut = out;
+                    textArea.append("Admin " + nombre + " conectado.\n");
+                } else {
+                    esAdmin = false;
+                    nombre = generarNombreUnico(linea);
+                    nombresClientes.add(nombre);
+                    clientesComunes.add(out);
+                    textArea.append(nombre + " se ha conectado.\n");
+
+                    if (adminOut != null) {
+                        adminOut.println(nombre + " se ha conectado.");
+                    }
+                }
+
+                // Enviar el nombre final al cliente
+                out.println("Tu nombre asignado: " + nombre);
+
+                // Manejar los mensajes
                 String mensaje;
                 while ((mensaje = in.readLine()) != null) {
                     if (!running) break;
-                    textArea.append("Mensaje recibido: " + mensaje + "\n");
-                    for (PrintWriter cliente : clientes) {
-                        cliente.println(mensaje);
+
+                    if (esAdmin) {
+                        textArea.append("ADMIN -> Todos: " + mensaje + "\n");
+                        for (PrintWriter cliente : clientesComunes) {
+                            cliente.println("Admin " + nombre + ": " + mensaje);
+                        }
+                    } else {
+                        textArea.append(nombre + " -> Admin: " + mensaje + "\n");
+                        if (adminOut != null) {
+                            adminOut.println(nombre + ": " + mensaje);
+                        }
                     }
                 }
             } catch (IOException e) {
                 textArea.append("Error con el cliente " + nombre + "\n");
             } finally {
                 if (out != null) {
-                    clientes.remove(out);
+                    clientesComunes.remove(out);
                 }
+                nombresClientes.remove(nombre);
                 textArea.append(nombre + " se ha desconectado.\n");
+
+                if (adminOut != null) {
+                    adminOut.println(nombre + " se ha desconectado.");
+                }
             }
+        }
+
+        private String generarNombreUnico(String nombreBase) {
+            String nuevoNombre = nombreBase;
+            int contador = 1;
+            while (nombresClientes.contains(nuevoNombre)) {
+                nuevoNombre = nombreBase + "_" + contador;
+                contador++;
+            }
+            return nuevoNombre;
         }
     }
 
@@ -124,4 +166,3 @@ public class PrincipalSrv extends JFrame {
         SwingUtilities.invokeLater(() -> new PrincipalSrv().setVisible(true));
     }
 }
-

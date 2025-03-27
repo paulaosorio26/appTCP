@@ -1,19 +1,16 @@
 package com.example.cliente.gui;
 
 import javax.swing.*;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 
 public class PrincipalCli extends JFrame {
-    private final int PORT = 12345;
-    private Socket socket;
-    private PrintWriter out;
+    private static final int PORT = 12345;
     private JTextArea textArea;
     private JTextField inputField;
     private JButton sendButton;
+    private PrintWriter out;
+    private Socket socket;
     private String nombre;
 
     public PrincipalCli() {
@@ -21,9 +18,13 @@ public class PrincipalCli extends JFrame {
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        nombre = JOptionPane.showInputDialog("Ingresa tu nombre de Administrador:");
-        if (nombre == null || nombre.trim().isEmpty()) nombre = "Admin";
+        // Solicitar nombre de administrador
+        nombre = JOptionPane.showInputDialog("Ingresa tu nombre de administrador:");
+        if (nombre == null || nombre.trim().isEmpty()) {
+            nombre = "Admin";
+        }
 
+        // Configurar la interfaz gráfica
         textArea = new JTextArea();
         textArea.setEditable(false);
         add(new JScrollPane(textArea), "Center");
@@ -45,18 +46,13 @@ public class PrincipalCli extends JFrame {
         try {
             socket = new Socket("localhost", PORT);
             out = new PrintWriter(socket.getOutputStream(), true);
-            out.println(nombre);
-            textArea.append("Conectado como " + nombre + "\n");
+            out.println("ADMIN:" + nombre); // Indicar que es admin
 
+            // Hilo para recibir mensajes del servidor
             new Thread(() -> {
                 try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                     String mensaje;
                     while ((mensaje = in.readLine()) != null) {
-                        if ("SERVIDOR_CERRADO".equals(mensaje)) {
-                            textArea.append("El servidor se ha caído.\n");
-                            deshabilitarChat();
-                            break;
-                        }
                         textArea.append(mensaje + "\n");
                     }
                 } catch (IOException e) {
@@ -71,19 +67,12 @@ public class PrincipalCli extends JFrame {
     private void enviarMensaje() {
         String mensaje = inputField.getText().trim();
         if (!mensaje.isEmpty() && out != null) {
-            out.println(mensaje);
-            textArea.append("Yo: " + mensaje + "\n");
+            out.println(mensaje); // Enviar mensaje al servidor
             inputField.setText("");
         }
-    }
-
-    private void deshabilitarChat() {
-        inputField.setEnabled(false);
-        sendButton.setEnabled(false);
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new PrincipalCli().setVisible(true));
     }
 }
-
