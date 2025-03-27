@@ -6,9 +6,9 @@ import java.net.Socket;
 
 public class PrincipalCli extends JFrame {
     private static final int PORT = 12345;
-    private JTextArea textArea;
-    private JTextField inputField;
-    private JButton sendButton;
+    private final JTextArea textArea;
+    private final JTextField inputField;
+    private final JButton sendButton;
     private PrintWriter out;
     private Socket socket;
     private String nombre;

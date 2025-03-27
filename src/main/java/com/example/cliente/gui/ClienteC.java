@@ -9,9 +9,9 @@ import java.net.Socket;
 
 public class ClienteC extends JFrame {
     private final int PORT = 12345;
-    private JTextArea textArea;
-    private JTextField inputField;
-    private JButton sendButton;
+    private final JTextArea textArea;
+    private final JTextField inputField;
+    private final JButton sendButton;
     private String nombre;
     private PrintWriter out;
     private Socket socket;
